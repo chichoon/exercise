@@ -1,6 +1,13 @@
-import { JSONFilePreset } from 'lowdb/node';
-import path from 'path';
-import fs from 'fs/promises';
+import { db } from './firebase';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  orderBy, 
+  Timestamp, 
+  where 
+} from 'firebase/firestore';
 
 export interface Item {
   id: string;
@@ -8,56 +15,69 @@ export interface Item {
   createdAt: string;
 }
 
-export interface Database {
-  items: Item[];
-}
-
-const defaultData: Database = { items: [] };
-
-const DATABASE_DIR = path.join(process.cwd(), 'public', 'database');
+// Firestore 컬렉션 참조
+const itemsCollection = collection(db, 'items');
 
 /**
- * Gets the lowdb instance for a specific date.
- */
-export const getDbForDate = async (date: Date) => {
-  // Ensure the directory exists
-  await fs.mkdir(DATABASE_DIR, { recursive: true });
-
-  const fileName = date.toISOString().split('T')[0] + '.json';
-  const filePath = path.join(DATABASE_DIR, fileName);
-  
-  const db = await JSONFilePreset<Database>(filePath, defaultData);
-  return db;
-};
-
-/**
- * Retrieves all items from all daily JSON files in the database directory.
+ * 모든 아이템을 Firestore에서 가져옵니다.
  */
 export const getAllItems = async (): Promise<Item[]> => {
   try {
-    await fs.mkdir(DATABASE_DIR, { recursive: true });
-    const files = await fs.readdir(DATABASE_DIR);
-    const jsonFiles = files.filter(file => file.endsWith('.json'));
-
-    const allItems: Item[] = [];
-
-    for (const file of jsonFiles) {
-      const filePath = path.join(DATABASE_DIR, file);
-      const content = await fs.readFile(filePath, 'utf-8');
-      try {
-        const data: Database = JSON.parse(content);
-        if (data && Array.isArray(data.items)) {
-          allItems.push(...data.items);
-        }
-      } catch (e) {
-        console.error(`Error parsing ${file}:`, e);
-      }
-    }
-
-    // Sort by createdAt descending
-    return allItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const q = query(itemsCollection, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Item[];
   } catch (error) {
-    console.error('Error reading database directory:', error);
+    console.error('Error fetching items from Firestore:', error);
     return [];
   }
+};
+
+/**
+ * 특정 날짜의 아이템을 가져옵니다. (YYYY-MM-DD 형식)
+ */
+export const getItemsByDate = async (dateStr: string): Promise<Item[]> => {
+  try {
+    // 해당 날짜의 시작과 끝 시간 계산 (UTC 기준)
+    const startDate = new Date(dateStr);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(dateStr);
+    endDate.setHours(23, 59, 59, 999);
+
+    const q = query(
+      itemsCollection,
+      where('createdAt', '>=', startDate.toISOString()),
+      where('createdAt', '<=', endDate.toISOString()),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Item[];
+  } catch (error) {
+    console.error(`Error fetching items for date ${dateStr}:`, error);
+    return [];
+  }
+};
+
+/**
+ * 새로운 아이템을 Firestore에 추가합니다.
+ */
+export const addItem = async (title: string): Promise<Item> => {
+  const newItem = {
+    title,
+    createdAt: new Date().toISOString(),
+  };
+
+  const docRef = await addDoc(itemsCollection, newItem);
+  return {
+    id: docRef.id,
+    ...newItem
+  };
 };

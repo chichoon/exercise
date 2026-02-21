@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getDb, Item } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid'; // We need uuid, I should install it or use crypto.randomUUID
+import { getAllItems, getDbForDate, Item } from '@/lib/db';
 
 export async function GET() {
-    const db = await getDb();
-    await db.read();
-    return NextResponse.json(db.data.items);
+    const items = await getAllItems();
+    return NextResponse.json(items);
 }
 
 export async function POST(request: Request) {
@@ -16,15 +14,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const db = await getDb();
-    await db.read();
-
+    const now = new Date();
     const newItem: Item = {
         id: crypto.randomUUID(),
         title,
-        createdAt: new Date().toISOString(),
+        createdAt: now.toISOString(),
     };
 
+    const db = await getDbForDate(now);
+    await db.read();
     db.data.items.push(newItem);
     await db.write();
 

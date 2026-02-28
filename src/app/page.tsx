@@ -1,13 +1,11 @@
-import { getDb } from '@/lib/db';
+import { getAllItems } from '@/lib/db';
 import AddItemForm from './components/AddItemForm';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
 
 export default async function Home() {
-  const db = await getDb();
-  await db.read();
-  const items = db.data.items;
+  const items = await getAllItems();
 
   return (
     <main className={styles.main}>

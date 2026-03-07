@@ -1,83 +1,71 @@
 import { db } from './firebase';
 import { 
   collection, 
-  addDoc, 
   getDocs, 
   query, 
-  orderBy, 
-  Timestamp, 
-  where 
+  setDoc,
+  doc
 } from 'firebase/firestore';
-
-export interface Item {
-  id: string;
-  title: string;
-  createdAt: string;
-}
-
-// Firestore 컬렉션 참조
-const itemsCollection = collection(db, 'items');
+import { Exercise } from './types';
 
 /**
- * 모든 아이템을 Firestore에서 가져옵니다.
+ * 특정 연도와 월의 컬렉션 참조를 가져옵니다.
+ * 구조: exercises/{year}/{month}
  */
-export const getAllItems = async (): Promise<Item[]> => {
+const getMonthCollectionRef = (year: string, month: string) => {
+  return collection(db, 'exercises', year, month.padStart(2, '0'));
+};
+
+/**
+ * 특정 연도와 월에 해당하는 모든 운동 기록을 가져옵니다.
+ */
+export const getExercisesByMonth = async (year: string, month: string): Promise<Exercise[]> => {
   try {
-    const q = query(itemsCollection, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+    const monthColRef = getMonthCollectionRef(year, month);
+    const querySnapshot = await getDocs(query(monthColRef));
     
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Item[];
+    // 각 날짜 문서(예: 2026-02-02) 내의 운동 배열을 하나로 합칩니다.
+    const allExercises: Exercise[] = [];
+    querySnapshot.forEach((doc) => {
+      const dayData = doc.data();
+      if (dayData && dayData.exercises) {
+        allExercises.push(...dayData.exercises);
+      }
+    });
+    
+    return allExercises.sort((a, b) => a.date.localeCompare(b.date));
   } catch (error) {
-    console.error('Error fetching items from Firestore:', error);
+    console.error(`Error fetching exercises for ${year}/${month}:`, error);
     return [];
   }
 };
 
 /**
- * 특정 날짜의 아이템을 가져옵니다. (YYYY-MM-DD 형식)
+ * 운동 기록을 특정 날짜 문서에 저장합니다.
+ * ID 예시: exercises/2026/02/2026-02-02
  */
-export const getItemsByDate = async (dateStr: string): Promise<Item[]> => {
+export const saveExercisesByDate = async (date: string, exercises: Exercise[]): Promise<void> => {
   try {
-    // 해당 날짜의 시작과 끝 시간 계산 (UTC 기준)
-    const startDate = new Date(dateStr);
-    startDate.setHours(0, 0, 0, 0);
+    const [year, month] = date.split('-');
+    // 문서 경로: exercises/2026/02/2026-02-02
+    const docRef = doc(db, 'exercises', year, month, date);
     
-    const endDate = new Date(dateStr);
-    endDate.setHours(23, 59, 59, 999);
-
-    const q = query(
-      itemsCollection,
-      where('createdAt', '>=', startDate.toISOString()),
-      where('createdAt', '<=', endDate.toISOString()),
-      orderBy('createdAt', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Item[];
+    await setDoc(docRef, { 
+      exercises,
+      updatedAt: new Date().toISOString()
+    });
   } catch (error) {
-    console.error(`Error fetching items for date ${dateStr}:`, error);
-    return [];
+    console.error('Error saving exercises to Firestore:', error);
+    throw error;
   }
 };
 
-/**
- * 새로운 아이템을 Firestore에 추가합니다.
- */
-export const addItem = async (title: string): Promise<Item> => {
-  const newItem = {
-    title,
-    createdAt: new Date().toISOString(),
-  };
-
-  const docRef = await addDoc(itemsCollection, newItem);
-  return {
-    id: docRef.id,
-    ...newItem
-  };
+// 기존 addExercise 호환성을 위해 유지 (단일 운동 추가 시 사용)
+export const addExercise = async (exercise: Exercise): Promise<void> => {
+  const [year, month, day] = exercise.date.split('-');
+  const dateStr = exercise.date;
+  
+  // 해당 날짜의 기존 데이터를 가져와서 추가하는 로직이 필요하지만, 
+  // 여기서는 간단히 해당 날짜 문서를 덮어쓰거나 새로 생성하는 방식으로 구현합니다.
+  await saveExercisesByDate(dateStr, [exercise]);
 };

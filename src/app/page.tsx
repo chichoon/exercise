@@ -1,33 +1,10 @@
-import { getAllItems } from '@/lib/db';
-import AddItemForm from './components/AddItemForm';
-import styles from './page.module.css';
+import { redirect } from 'next/navigation';
+import { format } from 'date-fns';
 
-export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
-
-export default async function Home() {
-  const items = await getAllItems();
-
-  return (
-    <main className={styles.main}>
-      <div className={styles.container}>
-        <h1 className={styles.title}>Item List</h1>
-        <AddItemForm />
-
-        <div className={styles.list}>
-          {items.length === 0 ? (
-            <p className={styles.empty}>No items yet. Add one above!</p>
-          ) : (
-            items.map((item) => (
-              <div key={item.id} className={styles.item}>
-                <span className={styles.itemTitle}>{item.title}</span>
-                <span className={styles.itemDate}>
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </main>
-  );
+export default function Home() {
+  // 메인 페이지 접속 시 현재 연도/월로 리다이렉트 (예: /2026/03)
+  const currentYear = format(new Date(), 'yyyy');
+  const currentMonth = format(new Date(), 'MM');
+  
+  redirect(`/${currentYear}/${currentMonth}`);
 }

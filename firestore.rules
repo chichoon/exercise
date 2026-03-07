@@ -2,10 +2,17 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 최종 구조 규칙
+    // 캘린더를 보여주기 위해 읽기(read)는 모두에게 허용합니다.
     match /exercises/{year}/{month}/{date} {
-      allow read, write: if true;
+      allow read: if true;
+      // 앱을 통한 쓰기(write)는 완전히 차단합니다.
+      // 데이터 추가/수정은 Firebase Console(웹)에서 직접 하실 수 있습니다.
+      allow write: if false;
     }
-
+    
+    // 그 외 모든 경로는 읽기/쓰기 모두 차단하여 보안을 강화합니다.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

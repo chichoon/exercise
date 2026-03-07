@@ -1,9 +1,11 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 'items' 컬렉션의 모든 문서에 대해서만 읽기와 쓰기 허용
-    match /items/{document=**} {
+    // 최종 구조 규칙
+    match /exercises/{year}/{month}/{date} {
       allow read, write: if true;
     }
+
   }
 }

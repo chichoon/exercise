@@ -1,7 +1,7 @@
 import Calendar from '../../components/Calendar';
 import styles from '../../page.module.scss';
 import { getExercisesByMonth } from '@/lib/db';
-import { parse, format, isValid } from 'date-fns';
+import { parse, isValid } from 'date-fns';
 
 interface PageProps {
   params: Promise<{ year: string; month: string }>;
@@ -28,10 +28,6 @@ export default async function MonthPage({ params, searchParams }: PageProps) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>나의 운동 기록</h1>
-      </header>
-      
       <main className={styles.main}>
         <Calendar 
           currentDate={currentDate} 

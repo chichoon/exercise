@@ -60,6 +60,38 @@ export const saveExercisesByDate = async (date: string, exercises: Exercise[]): 
   }
 };
 
+/**
+ * 특정 연도의 월별 운동 횟수를 가져옵니다.
+ */
+export const getMonthlyStats = async (year: string) => {
+  try {
+    const stats = [];
+    // 1월부터 12월까지 순회하며 데이터 개수 확인
+    for (let i = 1; i <= 12; i++) {
+      const monthStr = i.toString().padStart(2, '0');
+      const monthColRef = getMonthCollectionRef(year, monthStr);
+      const querySnapshot = await getDocs(query(monthColRef));
+      
+      let count = 0;
+      querySnapshot.forEach((doc) => {
+        const dayData = doc.data();
+        if (dayData && dayData.exercises) {
+          count += dayData.exercises.length;
+        }
+      });
+      
+      stats.push({
+        name: `${i}월`,
+        count: count
+      });
+    }
+    return stats;
+  } catch (error) {
+    console.error(`Error fetching stats for ${year}:`, error);
+    return [];
+  }
+};
+
 // 기존 addExercise 호환성을 위해 유지 (단일 운동 추가 시 사용)
 export const addExercise = async (exercise: Exercise): Promise<void> => {
   const [year, month, day] = exercise.date.split('-');

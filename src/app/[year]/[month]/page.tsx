@@ -1,4 +1,5 @@
 import Calendar from '../../components/Calendar';
+import Tabs from '../../components/Tabs';
 import styles from '../../page.module.scss';
 import { getExercisesByMonth } from '@/lib/db';
 import { parse, isValid } from 'date-fns';
@@ -28,6 +29,8 @@ export default async function MonthPage({ params, searchParams }: PageProps) {
 
   return (
     <div className={styles.page}>
+      <Tabs activeTab="calendar" />
+      
       <main className={styles.main}>
         <Calendar 
           currentDate={currentDate} 

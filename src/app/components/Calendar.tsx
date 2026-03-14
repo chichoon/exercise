@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import styles from './Calendar.module.scss';
-import { Exercise, WeightRecord, CardioRecord } from '@/lib/types';
+import { Exercise, WeightRecord, CardioRecord, RecordItem } from '@/lib/types';
 
 interface CalendarProps {
   currentDate: Date;
@@ -43,7 +43,7 @@ const Calendar = ({ currentDate, initialExercises, selectedDay, showSelector }: 
     return `${getMonthLink(currentDate)}?day=${format(day, 'yyyy-MM-dd')}`;
   };
 
-  const isWeightRecord = (record: any): record is WeightRecord => {
+  const isWeightRecord = (record: RecordItem): record is WeightRecord => {
     return 'sets' in record || 'reps' in record || 'weight' in record;
   };
 

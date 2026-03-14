@@ -21,9 +21,10 @@ interface CalendarProps {
   currentDate: Date;
   initialExercises: Exercise[];
   selectedDay: Date | null;
+  showSelector?: boolean;
 }
 
-const Calendar = ({ currentDate, initialExercises, selectedDay }: CalendarProps) => {
+const Calendar = ({ currentDate, initialExercises, selectedDay, showSelector }: CalendarProps) => {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -52,17 +53,54 @@ const Calendar = ({ currentDate, initialExercises, selectedDay }: CalendarProps)
 
   const selectedExercises = selectedDay ? getDayExercises(selectedDay) : [];
 
+  const currentYear = format(currentDate, 'yyyy');
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
   return (
     <div className={styles.calendarContainer}>
+      {/* Navigation with SVG Icons */}
       <div className={styles.header}>
-        <h2 className={styles.monthTitle}>
+        <Link href={getMonthLink(subMonths(currentDate, 1))} className={styles.navBtn}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </Link>
+        <Link href={`${getMonthLink(currentDate)}?select=true`} className={styles.monthTitle}>
           {format(currentDate, 'yyyy년 M월', { locale: ko })}
-        </h2>
-        <div className={styles.navButtons}>
-          <Link href={getMonthLink(subMonths(currentDate, 1))} className={styles.navButton}>이전</Link>
-          <Link href={getMonthLink(addMonths(currentDate, 1))} className={styles.navButton}>다음</Link>
-        </div>
+        </Link>
+        <Link href={getMonthLink(addMonths(currentDate, 1))} className={styles.navBtn}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </Link>
       </div>
+
+      {/* Selector Modal */}
+      {showSelector && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.monthSelectorModal}>
+            <h3>월 선택 ({currentYear})</h3>
+            <div className={styles.monthGrid}>
+              {months.map((m) => {
+                const monthStr = m.toString().padStart(2, '0');
+                const isActive = format(currentDate, 'MM') === monthStr;
+                return (
+                  <Link 
+                    key={m} 
+                    href={`/${currentYear}/${monthStr}`} 
+                    className={`${styles.monthLink} ${isActive ? styles.activeMonth : ''}`}
+                  >
+                    {m}월
+                  </Link>
+                );
+              })}
+            </div>
+            <Link href={getMonthLink(currentDate)} className={styles.closeModalBtn}>
+              취소
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className={styles.grid}>
         {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
@@ -73,7 +111,6 @@ const Calendar = ({ currentDate, initialExercises, selectedDay }: CalendarProps)
           const dayExercises = getDayExercises(day);
           const hasEx = dayExercises.length > 0;
           const isSelected = selectedDay && isSameDay(day, selectedDay);
-          const dayStr = format(day, 'd');
           
           return (
             <Link 
@@ -86,14 +123,14 @@ const Calendar = ({ currentDate, initialExercises, selectedDay }: CalendarProps)
                 ${isSelected ? styles.selectedDay : ''}
               `}
             >
-              <span className={styles.dayNumber}>{dayStr}</span>
+              <span className={styles.dayNumber}>{format(day, 'd')}</span>
               {hasEx && <div className={styles.exerciseDot} />}
             </Link>
           );
         })}
       </div>
 
-      {/* 상세 기록 보기 섹션 (SSR) */}
+      {/* Detail Section */}
       {selectedDay && selectedExercises.length > 0 && (
         <div className={styles.detailSection}>
           <div className={styles.detailHeader}>

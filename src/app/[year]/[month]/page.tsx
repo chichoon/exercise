@@ -5,12 +5,12 @@ import { parse, isValid } from 'date-fns';
 
 interface PageProps {
   params: Promise<{ year: string; month: string }>;
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{ day?: string; select?: string }>;
 }
 
 export default async function MonthPage({ params, searchParams }: PageProps) {
   const { year, month } = await params;
-  const { day: selectedDayStr } = await searchParams;
+  const { day: selectedDayStr, select: showSelector } = await searchParams;
   
   // 서버 사이드에서 데이터 가져오기
   const exercises = await getExercisesByMonth(year, month);
@@ -33,6 +33,7 @@ export default async function MonthPage({ params, searchParams }: PageProps) {
           currentDate={currentDate} 
           initialExercises={exercises} 
           selectedDay={selectedDay}
+          showSelector={showSelector === 'true'}
         />
       </main>
       
